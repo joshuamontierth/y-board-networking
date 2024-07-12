@@ -10,12 +10,11 @@
 #include <unordered_map>
 #include <yboard.h>
 
-
 static const String serverUrl = "http://ecen192.byu.edu:5000";
 
 typedef struct {
-    char *id;
-    char *password;
+    const char *id;
+    const char *password;
 } credentials_t;
 
 void start_sniffer();
@@ -29,12 +28,10 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type);
 // State machine states
 void sniff_all_state();
 void sniff_individual_state();
-void adjust_channel_state();
-void increase_channel_state();
-void decrease_channel_state();
 void client_state();
 
 bool get_credentials(credentials_t *credentials);
+bool poll_server();
 
 int current_channel = 1;
 bool sniffed_packet = false;
@@ -44,12 +41,11 @@ std::unordered_map<std::string, size_t> unique_macs;
 bool client_connected = false;
 bool sniffing = false;
 
+credentials_t credentials = {NULL, NULL};
+
 StateMachine machine = StateMachine();
 State *SniffStateAll = machine.addState(&sniff_all_state);
 State *SniffStateIndividual = machine.addState(&sniff_individual_state);
-State *AdjustChannelState = machine.addState(&adjust_channel_state);
-State *IncreaseChannelState = machine.addState(&increase_channel_state);
-State *DecreaseChannelState = machine.addState(&decrease_channel_state);
 State *ClientState = machine.addState(&client_state);
 
 void setup() {
@@ -58,25 +54,10 @@ void setup() {
 
     // Set up state machine transitions
     SniffStateAll->addTransition([]() { return Yboard.get_switch(1); }, SniffStateIndividual);
-    SniffStateAll->addTransition([]() { return Yboard.get_button(1); }, AdjustChannelState);
     SniffStateAll->addTransition([]() { return Yboard.get_switch(2); }, ClientState);
 
     SniffStateIndividual->addTransition([]() { return !Yboard.get_switch(1); }, SniffStateAll);
-    SniffStateIndividual->addTransition([]() { return Yboard.get_button(1); }, AdjustChannelState);
     SniffStateIndividual->addTransition([]() { return Yboard.get_switch(2); }, ClientState);
-
-    AdjustChannelState->addTransition(
-        []() { return !Yboard.get_switch(1) && Yboard.get_button(1) && Yboard.get_button(2); },
-        SniffStateAll);
-    AdjustChannelState->addTransition(
-        []() { return Yboard.get_switch(1) && Yboard.get_button(1) && Yboard.get_button(2); },
-        SniffStateIndividual);
-    AdjustChannelState->addTransition([]() { return Yboard.get_button(2); }, IncreaseChannelState);
-    AdjustChannelState->addTransition([]() { return Yboard.get_button(1); }, DecreaseChannelState);
-
-    IncreaseChannelState->addTransition([]() { return !Yboard.get_button(2); }, AdjustChannelState);
-
-    DecreaseChannelState->addTransition([]() { return !Yboard.get_button(1); }, AdjustChannelState);
 
     ClientState->addTransition([]() { return !Yboard.get_switch(2) && !Yboard.get_switch(1); },
                                SniffStateAll);
@@ -270,99 +251,76 @@ void client_state() {
         // Set the lights to show that it is connected
         Yboard.set_all_leds_color(0, 0, 100);
         Serial.println(WiFi.localIP());
+    }
 
+    if (credentials.id == NULL || credentials.password == NULL) {
         // Get the ID and password from the server
-        credentials_t credentials;
-        if (!get_credentials(*credentials)) {
+        if (!get_credentials(&credentials)) {
             Serial.println("Error getting credentials from server");
-            return;
         }
+        // Wait for 5 seconds and then try again
+        delay(5000);
+        return;
     }
 
     // Send command to server
-    delay(1000);
+    poll_server();
+    delay(2000);
 }
 
-void adjust_channel_state() {
-    // Only run this state once
-    if (!machine.executeOnce) {
-        delay(200);
-        return;
-    }
-    Serial.println("Adjust channel state");
-
-    // Light up the LEDs based on the current channel
-    for (int i = 1; i < Yboard.led_count + 1; i++) {
-        if (i <= current_channel) {
-            Yboard.set_led_color(i, 255, 255, 255);
-        } else {
-            Yboard.set_led_color(i, 0, 0, 0);
-        }
-    }
-}
-
-void increase_channel_state() {
-    // Only run this state once
-    if (!machine.executeOnce) {
-        delay(200);
-        return;
-    }
-    Serial.println("Increase channel state");
-
-    current_channel++;
-    if (current_channel > 11) {
-        current_channel = 11;
-    }
-}
-
-void decrease_channel_state() {
-    // Only run this state once
-    if (!machine.executeOnce) {
-        delay(200);
-        return;
-    }
-    Serial.println("Decrease channel state");
-
-    current_channel--;
-    if (current_channel < 1) {
-        current_channel = 1;
-    }
-}
-
-void pollForCommands() {
+bool poll_server() {
     HTTPClient http;
     http.begin(serverUrl + "/poll_commands");
-
     int httpResponseCode = http.GET();
-    if (httpResponseCode == 200) {
-        String response = http.getString();
-        // // Process the received commands
-        // JsonDocument doc(1024);
-        // deserializeJson(doc, response);
-        // String command = doc["command"].as<String>();
-        // printf("Received command: %s\n", command.c_str());
-        // // Check the command and respond accordingly
-        // if (command == "change_led_color") {
-        //     int r = doc["r"].as<int>();
-        //     int g = doc["g"].as<int>();
-        //     int b = doc["b"].as<int>();
-        //     printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
-        //     // Implement your LED color change logic here
-        //     all_leds_set_color(r, g, b);
-        //     // Confirm that the command was executed
-        //     confirmCommandExecuted(command);
-        // } else if (command == "change_password") {
-        //     String new_password = doc["new_password"].as<String>();
-        //     printf("Changing password to %s\n", new_password.c_str());
-        //     // Implement your password change logic here
-        //     app_password = new_password;
-        //     // Confirm that the command was executed
-        //     confirmCommandExecuted(command);
-        // } else {
-        //     printf("Unknown command: %s\n", command.c_str());
-        // }
+
+    if (httpResponseCode != 200) {
+        Serial.printf("Error: HTTP response code was not 200 (%d)\n", httpResponseCode);
+        http.end();
+        return false;
     }
-    http.end();
+
+    String payload = http.getString();
+    http.end(); // Close the connection
+
+    JsonDocument doc;
+    if (deserializeJson(doc, payload) != DeserializationError::Ok) {
+        Serial.printf("Error: Could not parse server response\n");
+        return false;
+    }
+
+    if (!doc.containsKey("command")) {
+        Serial.printf("Error: Server response does not contain 'command'\n");
+        return false;
+    }
+
+    String command = doc["command"];
+
+    // Check the command and respond accordingly
+    if (command == "change_led_color") {
+        int r = doc["r"];
+        int g = doc["g"];
+        int b = doc["b"];
+
+        Serial.printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
+        Yboard.set_all_leds_color(r, g, b);
+        return true;
+    } else {
+        Serial.printf("Unknown command: %s\n", command.c_str());
+        return false;
+    }
+
+    // Confirm that the command was executed
+    //     confirmCommandExecuted(command);
+    // } else if (command == "change_password") {
+    //     String new_password = doc["new_password"].as<String>();
+    //     printf("Changing password to %s\n", new_password.c_str());
+    //     // Implement your password change logic here
+    //     app_password = new_password;
+    //     // Confirm that the command was executed
+    //     confirmCommandExecuted(command);
+    // } else {
+    //     printf("Unknown command: %s\n", command.c_str());
+    // }
 }
 
 bool get_credentials(credentials_t *credentials) {
