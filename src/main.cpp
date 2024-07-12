@@ -1,13 +1,22 @@
 #include "Arduino.h"
+#include "HTTPClient.h"
 #include "colors.h"
 #include "esp_wifi.h"
 #include "esp_wifi_types.h"
 #include "wifi_sniffing.h"
+#include <ArduinoJson.h>
 #include <StateMachine.h>
 #include <WiFi.h>
 #include <unordered_map>
 #include <yboard.h>
 
+
+static const String serverUrl = "http://ecen192.byu.edu:5000";
+
+typedef struct {
+    char *id;
+    char *password;
+} credentials_t;
 
 void start_sniffer();
 void stop_sniffer();
@@ -24,6 +33,8 @@ void adjust_channel_state();
 void increase_channel_state();
 void decrease_channel_state();
 void client_state();
+
+bool get_credentials(credentials_t *credentials);
 
 int current_channel = 1;
 bool sniffed_packet = false;
@@ -258,10 +269,18 @@ void client_state() {
 
         // Set the lights to show that it is connected
         Yboard.set_all_leds_color(0, 0, 100);
+        Serial.println(WiFi.localIP());
+
+        // Get the ID and password from the server
+        credentials_t credentials;
+        if (!get_credentials(*credentials)) {
+            Serial.println("Error getting credentials from server");
+            return;
+        }
     }
 
-    Serial.println(WiFi.localIP());
-    delay(500);
+    // Send command to server
+    delay(1000);
 }
 
 void adjust_channel_state() {
@@ -307,5 +326,74 @@ void decrease_channel_state() {
     current_channel--;
     if (current_channel < 1) {
         current_channel = 1;
+    }
+}
+
+void pollForCommands() {
+    HTTPClient http;
+    http.begin(serverUrl + "/poll_commands");
+
+    int httpResponseCode = http.GET();
+    if (httpResponseCode == 200) {
+        String response = http.getString();
+        // // Process the received commands
+        // JsonDocument doc(1024);
+        // deserializeJson(doc, response);
+        // String command = doc["command"].as<String>();
+        // printf("Received command: %s\n", command.c_str());
+        // // Check the command and respond accordingly
+        // if (command == "change_led_color") {
+        //     int r = doc["r"].as<int>();
+        //     int g = doc["g"].as<int>();
+        //     int b = doc["b"].as<int>();
+        //     printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
+        //     // Implement your LED color change logic here
+        //     all_leds_set_color(r, g, b);
+        //     // Confirm that the command was executed
+        //     confirmCommandExecuted(command);
+        // } else if (command == "change_password") {
+        //     String new_password = doc["new_password"].as<String>();
+        //     printf("Changing password to %s\n", new_password.c_str());
+        //     // Implement your password change logic here
+        //     app_password = new_password;
+        //     // Confirm that the command was executed
+        //     confirmCommandExecuted(command);
+        // } else {
+        //     printf("Unknown command: %s\n", command.c_str());
+        // }
+    }
+    http.end();
+}
+
+bool get_credentials(credentials_t *credentials) {
+    printf("Getting credentials from the server\n");
+
+    HTTPClient http;
+    http.begin(serverUrl + "/get_credentials");
+    int httpResponseCode = http.GET();
+
+    if (httpResponseCode != 200) {
+        Serial.printf("Error: HTTP response code was not 200 (%d)\n", httpResponseCode);
+        http.end();
+        return false;
+    }
+
+    String payload = http.getString();
+    http.end(); // Close the connection
+    Serial.println(payload);
+
+    JsonDocument doc;
+    if (deserializeJson(doc, payload) != DeserializationError::Ok) {
+        Serial.printf("Error: Could not parse server response\n");
+        return false;
+    }
+
+    if (doc.containsKey("identifier") && doc.containsKey("password")) {
+        credentials->id = doc["identifier"];
+        credentials->password = doc["password"];
+        return true;
+    } else {
+        Serial.printf("Error: Server response does not contain 'identifier' or 'password'\n");
+        return false;
     }
 }
