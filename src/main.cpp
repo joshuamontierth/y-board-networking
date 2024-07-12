@@ -32,7 +32,6 @@ bool leds[20] = {false};
 std::unordered_map<std::string, size_t> unique_macs;
 bool client_connected = false;
 bool sniffing = false;
-bool already_connected = false;
 
 StateMachine machine = StateMachine();
 State *SniffStateAll = machine.addState(&sniff_all_state);
@@ -96,20 +95,19 @@ void start_client() {
     // Connect to the WiFi network
     Serial.println("Connecting to WiFi network");
 
-    if (!already_connected) {
-        already_connected = true;
-        WiFi.begin(SSID, PASSWORD);
-    } else {
-        WiFi.reconnect();
-    }
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(SSID, PASSWORD);
 
     while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
+        Yboard.set_all_leds_color(255, 255, 255);
+        delay(250);
+        Yboard.set_all_leds_color(0, 0, 0);
+        delay(250);
         Serial.printf(".");
     }
 }
 
-void stop_client() { WiFi.disconnect(false); }
+void stop_client() { WiFi.disconnect(true, true); }
 
 void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
@@ -174,6 +172,7 @@ void sniff_all_state() {
     // Only run this once
     if (machine.executeOnce) {
         if (!sniffing) {
+            Serial.println("Stopping client and starting sniffer...");
             stop_client();
             delay(200);
             start_sniffer();
@@ -215,6 +214,7 @@ void sniff_individual_state() {
     // Only run this once
     if (machine.executeOnce) {
         if (!sniffing) {
+            Serial.println("Stopping client and starting sniffer...");
             stop_client();
             delay(200);
             start_sniffer();
@@ -249,11 +249,15 @@ void client_state() {
         Yboard.set_all_leds_color(0, 0, 0);
 
         if (sniffing) {
+            Serial.println("Stopping sniffer and starting client...");
             stop_sniffer();
             sniffing = false;
             delay(200);
             start_client();
         }
+
+        // Set the lights to show that it is connected
+        Yboard.set_all_leds_color(0, 0, 100);
     }
 
     Serial.println(WiFi.localIP());
