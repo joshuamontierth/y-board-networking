@@ -66,13 +66,13 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
     }
 }
 
-void LabWiFiImp::setup(const String ssid, const String password, bool *any_sniffed_packet,
+void LabWiFiImp::setup(const String &ssid, const String &password, bool *any_sniffed_packet,
                        bool packets[20]) {
     setup(ssid.c_str(), password.c_str(), any_sniffed_packet, packets);
 }
 
-void LabWiFiImp::setup(const std::string ssid, const std::string password, bool *any_sniffed_packet,
-                       bool packets[20]) {
+void LabWiFiImp::setup(const std::string &ssid, const std::string &password,
+                       bool *any_sniffed_packet, bool packets[20]) {
     setup(ssid.c_str(), password.c_str(), any_sniffed_packet, packets);
 }
 

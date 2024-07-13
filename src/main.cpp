@@ -12,13 +12,13 @@ static const String server_url = "http://ecen192.byu.edu:5000";
 static bool station_mode = false;
 static bool monitor_mode = false;
 
-bool get_credentials(credentials_t *credentials);
-bool poll_server();
-
 typedef struct {
     const char *id;
     const char *password;
 } credentials_t;
+
+bool get_credentials(credentials_t *credentials);
+bool poll_server();
 
 bool sniffed_packet = false;
 bool leds[20] = {false};

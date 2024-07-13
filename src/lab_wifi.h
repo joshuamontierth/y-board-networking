@@ -37,9 +37,9 @@ class LabWiFiImp {
   public:
     void setup(const char *ssid, const char *password, bool *any_sniffed_packet,
                bool sniffed_packets[20]);
-    void setup(const String ssid, const String password, bool *any_sniffed_packet,
+    void setup(const String &ssid, const String &password, bool *any_sniffed_packet,
                bool sniffed_packets[20]);
-    void setup(const std::string ssid, const std::string password, bool *any_sniffed_packet,
+    void setup(const std::string &ssid, const std::string &password, bool *any_sniffed_packet,
                bool sniffed_packets[20]);
     void start_sniffer();
     void stop_sniffer();
