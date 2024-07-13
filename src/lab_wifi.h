@@ -1,4 +1,13 @@
+#ifndef LABWIFI_H
+#define LABWIFI_H
+
+#include <WiFi.h>
+#include <set>
 #include <stdint.h>
+#include <unordered_map>
+
+#include "esp_wifi.h"
+#include "esp_wifi_types.h"
 
 typedef struct {
     int16_t frame_ctrl;
@@ -23,3 +32,21 @@ typedef struct {
     uint8_t protected_frame : 1;
     uint8_t order : 1;
 } frame_ctrl_t;
+
+class LabWiFiImp {
+  public:
+    void setup(const char *ssid, const char *password, bool *any_sniffed_packet,
+               bool sniffed_packets[20]);
+    void start_sniffer();
+    void stop_sniffer();
+    void start_client();
+    void stop_client();
+
+  private:
+    const char *ssid;
+    const char *password;
+};
+
+extern LabWiFiImp LabWiFi;
+
+#endif
