@@ -5,15 +5,9 @@
 #include <ArduinoJson.h>
 #include <yboard.h>
 
-#define SSID ""
-#define PASSWORD ""
-
-static const String serverUrl = "http://ecen192.byu.edu:5000";
-
-typedef struct {
-    const char *id;
-    const char *password;
-} credentials_t;
+static const String ssid = "";
+static const String password = "";
+static const String server_url = "http://ecen192.byu.edu:5000";
 
 static bool station_mode = false;
 static bool monitor_mode = false;
@@ -21,7 +15,11 @@ static bool monitor_mode = false;
 bool get_credentials(credentials_t *credentials);
 bool poll_server();
 
-int current_channel = 1;
+typedef struct {
+    const char *id;
+    const char *password;
+} credentials_t;
+
 bool sniffed_packet = false;
 bool leds[20] = {false};
 
@@ -30,7 +28,7 @@ credentials_t credentials = {NULL, NULL};
 void setup() {
     Serial.begin(9600);
     Yboard.setup();
-    LabWiFi.setup(SSID, PASSWORD, &sniffed_packet, leds);
+    LabWiFi.setup(ssid, password, &sniffed_packet, leds);
 }
 
 void loop() {
@@ -99,7 +97,7 @@ void loop() {
 
 bool poll_server() {
     HTTPClient http;
-    http.begin(serverUrl + "/poll_commands");
+    http.begin(server_url + "/poll_commands");
     int httpResponseCode = http.GET();
 
     if (httpResponseCode != 200) {
@@ -156,7 +154,7 @@ bool get_credentials(credentials_t *credentials) {
     printf("Getting credentials from the server\n");
 
     HTTPClient http;
-    http.begin(serverUrl + "/get_credentials");
+    http.begin(server_url + "/get_credentials");
     int httpResponseCode = http.GET();
 
     if (httpResponseCode != 200) {
