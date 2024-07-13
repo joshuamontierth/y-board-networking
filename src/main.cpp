@@ -36,8 +36,10 @@ void setup() {
 void loop() {
     if (Yboard.get_switch(2)) {
         if (!station_mode) {
-            LabWiFi.stop_sniffer();
-            monitor_mode = false;
+            if (monitor_mode) {
+                LabWiFi.stop_sniffer();
+                monitor_mode = false;
+            }
 
             LabWiFi.start_client();
             station_mode = true;
@@ -59,8 +61,10 @@ void loop() {
     }
 
     if (!monitor_mode) {
-        LabWiFi.stop_client();
-        station_mode = false;
+        if (station_mode) {
+            LabWiFi.stop_client();
+            station_mode = false;
+        }
 
         LabWiFi.start_sniffer();
         monitor_mode = true;
