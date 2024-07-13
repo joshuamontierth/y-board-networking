@@ -68,8 +68,8 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
 
 void LabWiFiImp::setup(const char *ssid, const char *password, bool *any_sniffed_packet,
                        bool packets[20]) {
-    ssid = ssid;
-    password = password;
+    this->ssid = ssid;
+    this->password = password;
     sniffed_packet = any_sniffed_packet;
     sniffed_packets = packets;
 }
@@ -92,7 +92,7 @@ void LabWiFiImp::stop_sniffer() {
 
 void LabWiFiImp::start_client() {
     // Connect to the WiFi network
-    Serial.println("Connecting to WiFi network");
+    Serial.printf("Connecting to WiFi network (%s)\n", ssid);
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);

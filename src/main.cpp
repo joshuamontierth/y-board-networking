@@ -30,7 +30,7 @@ credentials_t credentials = {NULL, NULL};
 void setup() {
     Serial.begin(9600);
     Yboard.setup();
-    LabWiFi.setup("", "", &sniffed_packet, leds);
+    LabWiFi.setup(SSID, PASSWORD, &sniffed_packet, leds);
 }
 
 void loop() {
