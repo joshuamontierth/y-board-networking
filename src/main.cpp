@@ -5,7 +5,7 @@
 #include <ArduinoJson.h>
 #include <yboard.h>
 
-static const String ssid = "";
+static const String ssid = "BYU-WiFi";
 static const String password = "";
 static const String server_url = "http://ecen192.byu.edu:5000";
 
@@ -20,23 +20,59 @@ typedef struct {
 bool get_credentials(credentials_t *credentials);
 bool poll_server();
 
-bool sniffed_packet = false;
-bool leds[20] = {false};
+int sniffed_packet = 0;
+int sniffed_packet_old = 0;
+int leds[20] = {0};
+int channel = 1;
+unsigned long time_since_packet = 0;
 
 credentials_t credentials = {NULL, NULL};
+
+void set_channel_state() {
+    set_display_lock(true);
+    clear_display();
+    while(Yboard.get_switch(1)) {
+        display_text("Channel: " + std::to_string(channel), "Press button 1 to -", "Press button 2 to +");
+        Yboard.set_all_leds_color(0, 0, 0);
+        Yboard.set_led_color(channel, 255, 255, 255);
+        if(Yboard.get_button(2)) {
+            channel++;
+            while(Yboard.get_button(2));
+        }
+        else if(Yboard.get_button(1)) {
+            channel--;
+            while(Yboard.get_button(1));
+        }
+        if (channel == 12) {
+            channel = 1;
+        }
+        if (channel == 0) {
+            channel = 11;
+        }
+
+    }
+    set_display_lock(false);
+    clear_display();
+    LabWiFi.clear_mac_data();
+    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+}
 
 void setup() {
     Serial.begin(9600);
     Yboard.setup();
     LabWiFi.setup(ssid, password, &sniffed_packet, leds);
+    time_since_packet = millis();
 }
 
 void loop() {
+    
+
     if (Yboard.get_switch(2)) {
         if (!station_mode) {
             if (monitor_mode) {
                 LabWiFi.stop_sniffer();
                 monitor_mode = false;
+                esp_restart();
             }
 
             LabWiFi.start_client();
@@ -58,12 +94,26 @@ void loop() {
         return;
     }
 
+    if (sniffed_packet != sniffed_packet_old) {
+        time_since_packet = millis();
+    }
+    else if (millis() - time_since_packet > 3000) {
+        display_text("No packets sniffed", "", "Packets/sec: 0");
+    }
+    
+    sniffed_packet_old = sniffed_packet;
+    if (sniffed_packet == INT32_MAX) {
+        sniffed_packet = 0;
+    }
+    
+
     if (!monitor_mode) {
         if (station_mode) {
             LabWiFi.stop_client();
             station_mode = false;
+            esp_restart();
         }
-
+        
         LabWiFi.start_sniffer();
         monitor_mode = true;
     }
@@ -73,23 +123,16 @@ void loop() {
     Yboard.set_led_brightness(brightness);
 
     if (Yboard.get_switch(1)) {
-        // If the first switch is set, blink the LEDs for every frame sniffed
-        if (sniffed_packet) {
-            sniffed_packet = false;
-
-            // Light up LEDs
-            Yboard.set_all_leds_color(255, 255, 255);
-        } else {
-            // Turn off LEDs
-            Yboard.set_all_leds_color(0, 0, 0);
-        }
+        set_channel_state();
     } else {
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 18; i++) {
+            int offset = i >= 13 ? 1 : 0;
             if (leds[i]) {
-                Yboard.set_led_color(i + 1, 255, 255, 255);
-                leds[i] = false;
+                
+                Yboard.set_led_color(i + 1 + offset,red_to_blue(leds[i]).red, red_to_blue(leds[i]).green, red_to_blue(leds[i]).blue);
+                leds[i] = 0;
             } else {
-                Yboard.set_led_color(i + 1, 0, 0, 0);
+                Yboard.set_led_color(i + 1 + offset, 0, 0, 0);
             }
         }
     }
@@ -173,12 +216,16 @@ bool get_credentials(credentials_t *credentials) {
         return false;
     }
 
-    if (doc.containsKey("identifier") && doc.containsKey("password")) {
-        credentials->id = doc["identifier"];
+    if (doc.containsKey("ip_address") && doc.containsKey("password")) {
+        credentials->id = doc["ip_address"];
         credentials->password = doc["password"];
+        setup_display();
+        display_text("IP: " + std::string(credentials->id), "Password: " + std::string(credentials->password), "");
         return true;
     } else {
         Serial.printf("Error: Server response does not contain 'identifier' or 'password'\n");
         return false;
     }
 }
+
+

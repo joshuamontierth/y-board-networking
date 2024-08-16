@@ -33,22 +33,32 @@ typedef struct {
     uint8_t order : 1;
 } frame_ctrl_t;
 
+
+bool setup_display();
+void display_text(const std::string &text_1,const std::string &text_2,const std::string &text_3);
+void clear_display();
+void set_display_lock(bool lock);
+
+
 class LabWiFiImp {
   public:
-    void setup(const char *ssid, const char *password, bool *any_sniffed_packet,
-               bool sniffed_packets[20]);
-    void setup(const String &ssid, const String &password, bool *any_sniffed_packet,
-               bool sniffed_packets[20]);
-    void setup(const std::string &ssid, const std::string &password, bool *any_sniffed_packet,
-               bool sniffed_packets[20]);
+    void setup(const char *ssid, const char *password, int *any_sniffed_packet,
+               int sniffed_packets[20]);
+    void setup(const String &ssid, const String &password, int *any_sniffed_packet,
+               int sniffed_packets[20]);
+    void setup(const std::string &ssid, const std::string &password, int *any_sniffed_packet,
+               int sniffed_packets[20]);
     void start_sniffer();
     void stop_sniffer();
     void start_client();
     void stop_client();
+    void clear_mac_data();
+   
 
   private:
     const char *ssid;
     const char *password;
+    
 };
 
 extern LabWiFiImp LabWiFi;

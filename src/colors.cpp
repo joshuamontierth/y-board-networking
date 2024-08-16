@@ -22,20 +22,20 @@ RGBColor color_wheel(uint8_t wheel_pos) {
     return result;
 }
 
-RGBColor blue_to_red(int blueShade) {
+RGBColor red_to_blue(int redShade) {
     RGBColor result;
 
     // Ensure that the blueShade is within the valid range (0-255)
-    if (blueShade < 0) {
-        blueShade = 0;
-    } else if (blueShade > 255) {
-        blueShade = 255;
+    if (redShade < 0) {
+        redShade = 0;
+    } else if (redShade > 255) {
+        redShade = 255;
     }
 
     // Map blue to red (assuming pure blue to pure red transition)
-    result.red = 255 - blueShade;
+    result.red = redShade;
     result.green = 0;
-    result.blue = blueShade;
-
+    result.blue = 255 - redShade;
+    
     return result;
 }

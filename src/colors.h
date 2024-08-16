@@ -11,6 +11,6 @@ typedef struct {
 
 RGBColor color_wheel(uint8_t wheel_pos);
 
-RGBColor blue_to_red(int blueShade);
+RGBColor red_to_blue(int redShade);
 
 #endif /* COLORS_H */
