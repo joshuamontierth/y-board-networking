@@ -4,6 +4,7 @@
 #include <Adafruit_SSD1306.h>
 #include <unordered_map>
 #include <deque>
+#include "oui_lookup.h"
 
 LabWiFiImp LabWiFi;
 
@@ -20,6 +21,7 @@ unsigned long start_time = 0;
 char packet_rate[20];
 bool display_lock = false;
 
+
 void set_display_lock(bool lock) {
     display_lock = lock;
 }
@@ -35,11 +37,12 @@ bool setup_display() {
     display.setTextColor(1);
     display.setRotation(0); // Can be 0, 90, 180, or 270
     display.setTextWrap(false);
-    display.dim(0.8);
     display.display();
     display_setup = true;
     return true;
 }
+
+
 
 void display_text(const std::string &text_1, const std::string &text_2, const std::string &text_3) {
     unsigned long current_time = millis();
@@ -63,19 +66,7 @@ void clear_display() {
     display.display();
 }
 
-String readFile(const char *filename) {
-    File file = SD.open(filename, FILE_READ);
-    if (!file) {
-        return String("Unable to open file");
-    }
 
-    String content;
-    while (file.available()) {
-        content += (char)file.read();
-    }
-    file.close();
-    return content;
-}
 
 void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
     // We only care about data packets
@@ -135,21 +126,19 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
     extractOUI(mac_addr_2, oui_2);
     extractOUI(mac_addr_3, oui_3);
 
-    // Create filenames based on OUIs
-    char filename_2[31];
-    char filename_3[31];
 
-    snprintf(filename_2, sizeof(filename_2), "/mac-ouis/%c/%c/%c/%c/%c/%c/%s",
-             oui_2[0], oui_2[1], oui_2[2], oui_2[3], oui_2[4], oui_2[5], oui_2);
-    snprintf(filename_3, sizeof(filename_3), "/mac-ouis/%c/%c/%c/%c/%c/%c/%s",
-             oui_3[0], oui_3[1], oui_3[2], oui_3[3], oui_3[4], oui_3[5], oui_3);
     String content_2, content_3;
-    if (SD.exists(filename_2)) {
-        content_2 = readFile(filename_2);
+    if (SD.exists("/ouis.jmt")) {
+        content_2 = findManufacturer("/ouis.jmt", oui_2);
+        content_3 = findManufacturer("/ouis.jmt", oui_3);
     }
-    if (SD.exists(filename_3)) {
-        content_3 = readFile(filename_3);
+    else {
+        content_2 = "OUI Lookup";
+        content_3 = "not available";
     }
+    
+    
+    
     if (!display_lock) {
         display_text(content_2.c_str(), content_3.c_str(), packet_rate);
     }
@@ -185,6 +174,8 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (it != unique_macs.end()) {
         sniffed_packets[it->second] = rssi;
     }
+
+
 }
 
 void LabWiFiImp::setup(const String &ssid, const String &password, int *any_sniffed_packet,
@@ -268,3 +259,4 @@ void LabWiFiImp::clear_mac_data() {
     unique_macs.clear();
     mac_queue.clear();
 }
+
