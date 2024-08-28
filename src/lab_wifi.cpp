@@ -32,17 +32,15 @@ bool setup_display() {
     }
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) {
         return false;
-    } // Initialize display with I2C address: 0x3C
+    } 
     display.clearDisplay();
     display.setTextColor(1);
-    display.setRotation(0); // Can be 0, 90, 180, or 270
+    display.setRotation(0); 
     display.setTextWrap(false);
     display.display();
     display_setup = true;
     return true;
 }
-
-
 
 void display_text(const std::string &text_1, const std::string &text_2, const std::string &text_3) {
     unsigned long current_time = millis();
@@ -99,18 +97,18 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_ieee80211_packet_t *wifi_pkt = (wifi_ieee80211_packet_t *)pkt->payload;
 
     // Copy mac addresses to strings
+    char mac_addr_1[18];
     char mac_addr_2[18];
-    char mac_addr_3[18];
 
-    snprintf(mac_addr_2, sizeof(mac_addr_2), "%02X:%02X:%02X:%02X:%02X:%02X", wifi_pkt->addr2[0],
+    snprintf(mac_addr_1, sizeof(mac_addr_1), "%02X:%02X:%02X:%02X:%02X:%02X", wifi_pkt->addr2[0],
              wifi_pkt->addr2[1], wifi_pkt->addr2[2], wifi_pkt->addr2[3], wifi_pkt->addr2[4],
              wifi_pkt->addr2[5]);
-    snprintf(mac_addr_3, sizeof(mac_addr_3), "%02X:%02X:%02X:%02X:%02X:%02X", wifi_pkt->addr3[0],
+    snprintf(mac_addr_2, sizeof(mac_addr_2), "%02X:%02X:%02X:%02X:%02X:%02X", wifi_pkt->addr3[0],
              wifi_pkt->addr3[1], wifi_pkt->addr3[2], wifi_pkt->addr3[3], wifi_pkt->addr3[4],
              wifi_pkt->addr3[5]);
 
+    char oui_1[7];
     char oui_2[7];
-    char oui_3[7];
 
     // to extract OUI from MAC address
     auto extractOUI = [](const char *mac, char *oui) {
@@ -123,24 +121,24 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
         oui[6] = '\0';
     };
 
+    extractOUI(mac_addr_1, oui_1);
     extractOUI(mac_addr_2, oui_2);
-    extractOUI(mac_addr_3, oui_3);
 
 
-    String content_2, content_3;
+    String content_1, content_2;
     if (SD.exists("/ouis.jmt")) {
+        content_1 = findManufacturer("/ouis.jmt", oui_1);
         content_2 = findManufacturer("/ouis.jmt", oui_2);
-        content_3 = findManufacturer("/ouis.jmt", oui_3);
     }
     else {
-        content_2 = "OUI Lookup";
-        content_3 = "not available";
+        content_1 = "OUI Lookup";
+        content_2 = "not available";
     }
     
     
     
     if (!display_lock) {
-        display_text(content_2.c_str(), content_3.c_str(), packet_rate);
+        display_text(content_1.c_str(), content_2.c_str(), packet_rate);
     }
 
     // Update the deque and map with unique MAC addresses for each LED
@@ -159,18 +157,18 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
         }
     };
 
+    update_unique_macs(mac_addr_1);
     update_unique_macs(mac_addr_2);
-    update_unique_macs(mac_addr_3);
 
     // Update global variables with frame information
     (*sniffed_packet)++;
 
     // Turn on LEDs for each unique MAC address
-    auto it = unique_macs.find(mac_addr_2);
+    auto it = unique_macs.find(mac_addr_1);
     if (it != unique_macs.end()) {
         sniffed_packets[it->second] = rssi;
     }
-    it = unique_macs.find(mac_addr_3);
+    it = unique_macs.find(mac_addr_2);
     if (it != unique_macs.end()) {
         sniffed_packets[it->second] = rssi;
     }
