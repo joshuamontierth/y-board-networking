@@ -43,10 +43,10 @@ void set_channel_state() {
             channel--;
             while(Yboard.get_button(1));
         }
-        if (channel == 12) {
+        if (channel > 11) {
             channel = 1;
         }
-        if (channel == 0) {
+        if (channel < 1) {
             channel = 11;
         }
 
@@ -119,7 +119,7 @@ void loop() {
     }
 
     // Update brightness of LEDs based on knob
-    int brightness = map(Yboard.get_knob(), 0, 100, 0, 255);
+    int brightness = map(Yboard.get_knob(), 0, 100, 10, 255);
     Yboard.set_led_brightness(brightness);
 
     if (Yboard.get_switch(1)) {
