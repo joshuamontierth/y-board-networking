@@ -151,6 +151,7 @@ bool poll_server() {
 
     String payload = http.getString();
     http.end(); // Close the connection
+    Serial.println(payload);
 
     JsonDocument doc;
     if (deserializeJson(doc, payload) != DeserializationError::Ok) {
@@ -174,7 +175,13 @@ bool poll_server() {
         Serial.printf("Changing LED color to (%d, %d, %d)\n", r, g, b);
         Yboard.set_all_leds_color(r, g, b);
         return true;
-    } else {
+    }
+    else if (command == "play_song") {
+        String song = doc["song"];
+        Yboard.play_sound_file(song.c_str());
+        return true;
+    }
+    else {
         Serial.printf("Unknown command: %s\n", command.c_str());
         return false;
     }
