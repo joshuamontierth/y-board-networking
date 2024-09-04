@@ -126,9 +126,9 @@ void wifi_sniffer_rx_packet(void *buf, wifi_promiscuous_pkt_type_t type) {
 
 
     String content_1, content_2;
-    if (SD.exists("/ouis.jmt")) {
-        content_1 = findManufacturer("/ouis.jmt", oui_1);
-        content_2 = findManufacturer("/ouis.jmt", oui_2);
+    if (SD.exists("/sd_card/ouis.jmt")) {
+        content_1 = findManufacturer("/sd_card/ouis.jmt", oui_1);
+        content_2 = findManufacturer("/sd_card/ouis.jmt", oui_2);
     }
     else {
         content_1 = "OUI Lookup";

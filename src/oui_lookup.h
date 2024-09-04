@@ -1,5 +1,5 @@
-#ifndef TRIE_LOOKUP_H
-#define TRIE_LOOKUP_H
+#ifndef OUI_LOOKUP_H
+#define OUI_LOOKUP_H
 
 #include <SD.h>  // SD Card library
 #include <FS.h>  // Filesystem support for ESP32
@@ -31,4 +31,4 @@ String readManufacturerName(File &file, int32_t offset);
 // Function to navigate the trie and find the manufacturer name for the given OUI
 String findManufacturer(const char* filename, const String &oui);
 
-#endif  // TRIE_LOOKUP_H
+#endif  // OUI_LOOKUP_H
